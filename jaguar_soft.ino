@@ -65,7 +65,7 @@ unsigned long timer;
 int pin_steering_wheel_value = 0;
 int pin_cdplaying_sensor_state = 0;
 unsigned long button_hold_timer = millis();
-boolean last_output_state = LOW; // Jag mode = LOW, Android mode = HIGH
+boolean last_output_state = 0; // Jag mode = 0, Android mode = 1, Camera2 = 2
 boolean last_audio_state = LOW; // CD = LOW, Aux = HIGH
 boolean last_rtdpower_state = LOW;
 int button_hold_counter = 0;
@@ -171,7 +171,7 @@ void setup()
     Serial.begin(115200);
   };
   digitalWrite(pin_resistivetouch_power, HIGH);  // turn off android multitouch
-  last_output_state = HIGH;
+  last_output_state = 3; // Force change to Jaguar mode with dummy value
   set_jaguar_mode();
   set_audio_cd();
   rtdpower_on();
@@ -180,18 +180,25 @@ void setup()
 //--------------------------------------------------------------------------------------------------------
 void restore_state()
 {
-  if (last_output_state == HIGH)
+  if (last_output_state == 2)
   {
-    last_output_state = LOW; //Force change to android mode
-    set_android_mode();
-    debug("Last saved state was LOW");
+    last_output_state = 3; // Force change to Camera2 mode with dummy value
+    set_camera2_mode();
+    debug("Last saved state was Camera2");
   }
   else
-  {
-    last_output_state = HIGH; //Force change to jaguar mode
-    set_jaguar_mode();
-    debug("Last saved state was HIGH");
-  };
+    if (last_output_state == 1)
+    {
+	  last_output_state = 3; // Force change to Android mode with dummy value
+	  set_android_mode();
+      debug("Last saved state was Android");
+    }
+    else
+    {
+      last_output_state = 3; // Force change to Jaguar mode with dummy value
+      set_jaguar_mode();
+      debug("Last saved state was Jaguar");
+    }
 
   if (last_audio_state == LOW)
   {
@@ -202,7 +209,7 @@ void restore_state()
   {
     set_audio_aux();
     debug("Last audio state was HIGH");
-  };
+  }
   rtdpower_on();
 }
 //--------------------------------------------------------------------------------------------------------
@@ -360,9 +367,7 @@ void check_buttons()
     {
       debug("TEL pressed");
       rtdpower_on();
-      set_android_mode();
-      Keyboard.press(KEY_F9);
-      Keyboard.releaseAll();
+      set_camera2_mode();
     }
     if (row_c_state == LOW)
     {
@@ -372,40 +377,6 @@ void check_buttons()
     }
     delay(debounce_delay);
   }
-
-  //  column_2_state = digitalRead(pin_matrix_column2);
-  //  if (column_2_state != last_column_2_state)
-  //  {
-  //    if (column_2_state == HIGH)
-  //    {
-  //      debug("COL 2 pressed");
-  //      delayMicroseconds(row_scan_delay);
-  //      row_a_state = analogRead(pin_matrix_rowa);
-  //      row_b_state = analogRead(pin_matrix_rowb);
-  //      row_c_state = analogRead(pin_matrix_rowc);
-  //      row_d_state = analogRead(pin_matrix_rowd);
-  //      if (row_a_state == LOW)
-  //      {
-  //        debug("FAN DOWN pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_b_state == LOW)
-  //      {
-  //        debug("AUTO pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_c_state == LOW)
-  //      {
-  //        debug("LEFT TEMP DOWN pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_d_state == LOW)
-  //      {
-  //        debug("LEFT TEMP UP pressed");
-  //        delay(debounce_delay);
-  //      }
-  //    }
-  //  }
 
   column_3_state = digitalRead(pin_matrix_column3);
   if (column_3_state == HIGH) {
@@ -419,7 +390,7 @@ void check_buttons()
     {
       debug("NAV pressed");
       rtdpower_on();
-      if (last_output_state == LOW)
+      if (last_output_state != 1)
       {
         set_android_mode();
       }
@@ -459,39 +430,6 @@ void check_buttons()
   }
 
 
-  //  column_4_state = digitalRead(pin_matrix_column4);
-  //  if (column_4_state != last_column_4_state)
-  //  {
-  //    if (column_4_state == HIGH)
-  //    {
-  //      debug("COL 4 pressed");
-  //      delayMicroseconds(row_scan_delay);
-  //      row_a_state = analogRead(pin_matrix_rowa);
-  //      row_b_state = analogRead(pin_matrix_rowb);
-  //      row_c_state = analogRead(pin_matrix_rowc);
-  //      row_d_state = analogRead(pin_matrix_rowd);
-  //      if (row_a_state == LOW)
-  //      {
-  //        debug("FRONT HEAT pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_b_state == LOW)
-  //      {
-  //        debug("REAR HEAT pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_c_state == LOW)
-  //      {
-  //        debug("RIGHT TEMP UP pressed");
-  //        delay(debounce_delay);
-  //      }
-  //      if (row_d_state == LOW)
-  //      {
-  //        debug("RIGHT TEMP DOWN pressed");
-  //        delay(debounce_delay);
-  //      }
-  //    }
-  //  }
 }
 
 void check_cdc_button() {
@@ -522,28 +460,41 @@ void check_cdc_button() {
   }
 }
 
-void set_android_mode()
+void set_jaguar_mode()
 {
-  if (last_output_state == LOW)
+  if (last_output_state != 0)
   {
-    digitalWrite(pin_touchmatrix_power, HIGH);
-    digitalWrite(pin_resistivetouch_power, LOW);
-    debug("Setting Android mode");
-    last_output_state = HIGH;
-    input_control = 3;
+    digitalWrite(pin_touchmatrix_power, LOW);		// off relay, on touchmatrix
+    digitalWrite(pin_resistivetouch_power, HIGH);	// off usb_touch
+    debug("Setting Jaguar mode");
+    last_output_state = 0;
+    input_control = 5;		// VGA
     generalcontrol_flag = 1;
   }
 }
 
-void set_jaguar_mode()
+void set_android_mode()
 {
-  if (last_output_state == HIGH)
+  if (last_output_state != 1)
   {
-    digitalWrite(pin_touchmatrix_power, LOW);
-    digitalWrite(pin_resistivetouch_power, HIGH);
-    debug("Setting Jaguar mode");
-    last_output_state = LOW;
-    input_control = 5;
+    digitalWrite(pin_touchmatrix_power, HIGH);		// on relay, off touchmatrix
+    digitalWrite(pin_resistivetouch_power, LOW);	// on usb_touch
+    debug("Setting Android mode");
+    last_output_state = 1;
+    input_control = 3;		// HDMI
+    generalcontrol_flag = 1;
+  }
+}
+
+void set_camera2_mode()
+{
+  if (last_output_state != 2)
+  {
+    digitalWrite(pin_touchmatrix_power, HIGH);	  // on relay, off touchmatrix	
+    digitalWrite(pin_resistivetouch_power, HIGH); // off usb_touch
+    debug("Setting Camera2 mode");
+    last_output_state = 2;
+    input_control = 2;		// AV2
     generalcontrol_flag = 1;
   }
 }
@@ -621,8 +572,8 @@ void sleep()
   debug("Sleeping...");
   delay(1000);
   digitalWrite(pin_odroid_power, LOW);
-  digitalWrite(pin_touchmatrix_power, LOW);
-  digitalWrite(pin_resistivetouch_power, HIGH);
+  digitalWrite(pin_touchmatrix_power, LOW);        // off relay, on touchmatrix
+  digitalWrite(pin_resistivetouch_power, HIGH);    // off usb_touch
   digitalWrite(pin_audio1, LOW);
   digitalWrite(pin_audio2, LOW);
   noInterrupts ();           // make sure we don't get interrupted before we sleep
