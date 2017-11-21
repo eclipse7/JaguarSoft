@@ -65,7 +65,7 @@ unsigned long timer;
 int pin_steering_wheel_value = 0;
 int pin_cdplaying_sensor_state = 0;
 unsigned long button_hold_timer = millis();
-boolean last_output_state = 0; // Jag mode = 0, Android mode = 1, Camera2 = 2
+int last_output_state = 0; // Jag mode = 0, Android mode = 1, Camera2 = 2
 boolean last_audio_state = LOW; // CD = LOW, Aux = HIGH
 boolean last_rtdpower_state = LOW;
 int button_hold_counter = 0;
