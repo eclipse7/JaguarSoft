@@ -4,8 +4,8 @@
   When NAV button is pressed, change video input to HDMI, disable Jag touch matrix and enable USB touch
   When NAV button is held for 5 seconds, change video input to RGBS, enable Jag touch matrix and disable USB touch
   When NAV button is pressed and already in Android mode, send 'F10' keycode via USB to launch Navigation App
-  If AUDIO, TEL, CLIMATE or MENU pressed, change video input to RGBS, enable Jag touch matrix and disable USB touch
-  if AUDIO is held for 5 seconds, toggle between CD audio and Aux audio input
+  If AUDIO, CLIMATE or MENU pressed, change video input to RGBS, enable Jag touch matrix and disable USB touch
+  if CDC pressed, toggle between CD audio and Aux audio input
   If 'Skip Backwards' steering wheel control button pressed and the CD is playing and Aux audio input selected, send KEYCODE_MEDIA_PREVIOUS via USB.
   If 'Skip Forwards' steering wheel control button pressed and the CD is playing and Aux audio input selected,  send KEYCODE_MEDIA_NEXT via USB.
   If ACC switched power goes low, wait for 10 mins then send 'F7' keycode via USB then issue shutdown command and enter sleep mode (configure F7 in Odroid Utility to launch Terminal Emulator)
@@ -20,9 +20,10 @@
   NOTE: Assign F7 in Odroid Utility to launch Terminal Emulator - essential to allow soft-shutdown via USB
   NOTE: Assign F10 in Odroid Utility to launch your preferred Navigation app
 
-  Version 2.7 - edited by Eclipse
+  Version 2.7 - Pressing TEL activate AV2 input 
+  Version 2.6 - Pressing CDC button switches relay 3 and 4 on to changeover from CD audio to Aux input
   Version 2.5 - Now correctly switches to HDMI mode when NAV pressed when screen is off.
-  Version 2.4 - Holding MENU for 5 seconds switches off the LCD panel. Pressing AUDIO, TEL, CLIMATE, NAV or MENU switches the LCD panel back on. LCD panel switched on at power on and after waking from sleep mode
+  Version 2.4 - Holding MENU for 5 seconds switches off the LCD panel. Pressing AUDIO, CLIMATE, NAV or MENU switches the LCD panel back on. LCD panel switched on at power on and after waking from sleep mode
   Version 2.3 - Holding AUDIO for 5 secs switches relay 3 and 4 on to changeover from CD audio to Aux input. Holding NAV for 5 secs switches to Jag mode to access original Jag navigation. EEPROM use removed as now unnecessary due to now having constant power. Cleaned up the Serial debugging code, and removed unneeded i2c code.
   Version 2.2 - Improved debugging for steering wheel button detection. Altered the cdplaying_sensor threshold to allow connection to the main board instead of the CD transport
   Version 2.1 - Reassigned Switch ACC live detect to D0 and changed level detect as now pulled down via opto-isolator. Added wake function on D1 so when car unlocked and footwell lights illuminated the Odroid boots.
@@ -36,6 +37,8 @@
 
   Ben Willcox 2016-2017
   ben.willcox@willcoxonline.com
+  Vladyslav Khomenko  
+  https://github.com/eclipse7
 */
 
 // USER SETTINGS:
