@@ -94,21 +94,23 @@ int row_d_state = 0;
 
 //Digital Pins ---------------------------------------------------
 int pin_acc_detect = 0; // Opto 1
-int pin_unlock_detect = 1; // Opto 2
-int pin_2; //reserved for i2c
-int pin_3; //reserved for i2c
-int pin_audio1 = 4; //Relay 4 - Audio 1 - red - cd
-int pin_audio2 = 5; //Relay 3 - Audio 2 - green - aux
-int pin_touchmatrix_power = 6; //Relay 2 - Jaguar Touch Matrix Power
-int pin_odroid_power = 7; //Relay 1 - Odroid Power
-int pin_matrix_column1 = 8;
-int pin_matrix_column2 = 9;
-int pin_matrix_column3 = 10;
-int pin_matrix_column4 = 11;
-int pin_cdc = 12; // button CDC - white
-int pin_resistivetouch_power = 13;
-// A0 - pink
-// A1 - yellow
+int pin_backlight_input = 1; // OEM brightness input
+
+int pin_2; // reserved for i2c
+int pin_3; // reserved for i2c
+int pin_audio = 4; // Audio not_cd\aux
+int pin_cdc = 5; // Button CDC
+
+int pin_matrix_column1 = 7;
+int pin_matrix_column3 = 6;
+
+int pin_resistivetouch_power = 8; //USBTouch Power (low-ON, high-OFF)
+int pin_touchmatrix_power = 9; //Jaguar Touch Matrix Power (high-ON, low-OFF)
+int pin_odroid_power = 10; // Odroid Power
+int pin_front_camera_power = 11; // Camera power
+
+int pin_backlight = 12; 
+int pin_backlight_pwm = 13;
 
 //Analogue Pins ---------------------------------------------------
 int pin_steeringcontrol_sensor = 0; // Connects to steering wheel audio controls resistor ladder output
@@ -157,23 +159,22 @@ void setup()
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent); // register wire.write interrupt event
 
-  pinMode(pin_odroid_power, OUTPUT);
+  
   pinMode(pin_acc_detect, INPUT_PULLUP); // Switched ACC +12v detect line (interrupt)
+  pinMode(pin_backlight_input, INPUT); 
   pinMode(pin_matrix_column1, INPUT);
-  pinMode(pin_matrix_column2, INPUT);
   pinMode(pin_matrix_column3, INPUT);
-  pinMode(pin_matrix_column4, INPUT);
+  pinMode(pin_audio, OUTPUT);
+  pinMode(pin_cdc, INPUT_PULLUP);        // CDC button
   pinMode(pin_touchmatrix_power, OUTPUT);
   pinMode(pin_resistivetouch_power, OUTPUT);
-  pinMode(pin_audio1, OUTPUT);
-  pinMode(pin_audio2, OUTPUT);
-  pinMode(pin_cdc, INPUT_PULLUP);        // CDC button
-
-  if (serialDebug == 1)
-  {
-    Serial.begin(115200);
-  };
-  digitalWrite(pin_resistivetouch_power, HIGH);  // turn off android multitouch
+  pinMode(pin_odroid_power, OUTPUT);
+  pinMode(pin_front_camera_power, OUTPUT);
+  
+  if (serialDebug == 1) Serial.begin(115200);
+ 
+  digitalWrite(pin_front_camera_power, LOW); // off camera power
+  digitalWrite(pin_resistivetouch_power, HIGH);  // off usb_touch
   last_output_state = 3; // Force change to Jaguar mode with dummy value
   set_jaguar_mode();
   set_audio_cd();
@@ -215,6 +216,7 @@ void restore_state()
   }
   rtdpower_on();
 }
+
 //--------------------------------------------------------------------------------------------------------
 void loop()
 {
@@ -227,6 +229,7 @@ void loop()
   check_sleep();
 }
 //--------------------------------------------------------------------------------------------------------
+
 void requestEvent() {
 
   if ((answer[0] == 0xee) || (answer[0] == 0xe2))
@@ -467,8 +470,9 @@ void set_jaguar_mode()
 {
   if (last_output_state != 0)
   {
-    digitalWrite(pin_touchmatrix_power, LOW);		// off relay, on touchmatrix
+    digitalWrite(pin_touchmatrix_power, HIGH);		// on touchmatrix
     digitalWrite(pin_resistivetouch_power, HIGH);	// off usb_touch
+    digitalWrite(pin_front_camera_power, LOW); // off camera power
     debug("Setting Jaguar mode");
     last_output_state = 0;
     input_control = 5;		// VGA
@@ -480,8 +484,9 @@ void set_android_mode()
 {
   if (last_output_state != 1)
   {
-    digitalWrite(pin_touchmatrix_power, HIGH);		// on relay, off touchmatrix
+    digitalWrite(pin_touchmatrix_power, LOW);		// off touchmatrix
     digitalWrite(pin_resistivetouch_power, LOW);	// on usb_touch
+    digitalWrite(pin_front_camera_power, LOW); // off camera power
     debug("Setting Android mode");
     last_output_state = 1;
     input_control = 3;		// HDMI
@@ -493,8 +498,9 @@ void set_camera2_mode()
 {
   if (last_output_state != 2)
   {
-    digitalWrite(pin_touchmatrix_power, HIGH);	  // on relay, off touchmatrix	
+    digitalWrite(pin_touchmatrix_power, LOW);	  // off touchmatrix	
     digitalWrite(pin_resistivetouch_power, HIGH); // off usb_touch
+    digitalWrite(pin_front_camera_power, HIGH); // on camera power
     debug("Setting Camera2 mode");
     last_output_state = 2;
     input_control = 2;		// AV2
@@ -504,16 +510,14 @@ void set_camera2_mode()
 
 void set_audio_aux()
 {
-  digitalWrite(pin_audio1, LOW);
-  digitalWrite(pin_audio2, HIGH);
+  digitalWrite(pin_audio, HIGH);
   last_audio_state = HIGH;
   debug("Setting Audio Aux (Relays on)");
 }
 
 void set_audio_cd()
 {
-  digitalWrite(pin_audio1, HIGH);
-  digitalWrite(pin_audio2, LOW);
+  digitalWrite(pin_audio, LOW);
   last_audio_state = LOW;
   debug("Setting Audio CD (Relays off)");
 }
@@ -575,12 +579,12 @@ void sleep()
   debug("Sleeping...");
   delay(1000);
   digitalWrite(pin_odroid_power, LOW);
-  digitalWrite(pin_touchmatrix_power, LOW);        // off relay, on touchmatrix
+  digitalWrite(pin_touchmatrix_power, HIGH);       // on touchmatrix
   digitalWrite(pin_resistivetouch_power, HIGH);    // off usb_touch
-  digitalWrite(pin_audio1, LOW);
-  digitalWrite(pin_audio2, LOW);
+  digitalWrite(pin_front_camera_power, LOW);       // off camera power
+  digitalWrite(pin_audio, LOW);
+
   noInterrupts ();           // make sure we don't get interrupted before we sleep
-  //attachInterrupt(digitalPinToInterrupt(pin_unlock_detect), processInterrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(pin_acc_detect), processInterrupt, CHANGE);
   EIFR |= 0x01; // clear any queued interrupts
   set_sleep_mode (SLEEP_MODE_PWR_DOWN);
@@ -591,7 +595,6 @@ void sleep()
   USBCON &= ~_BV(USBE);
   sleep_cpu ();            // here the device is put to sleep
   // Sleeping now, waiting for interrupt
-  //detachInterrupt(digitalPinToInterrupt(pin_unlock_detect));
   detachInterrupt(digitalPinToInterrupt(pin_acc_detect));
   sleep_disable ();         // first thing after waking from sleep:
   delay(100);
@@ -611,7 +614,6 @@ void sleep()
 void check_sleep()
 {
   //debug("ACC"+String(digitalRead(pin_acc_detect)));
-  //debug("Unlock"+String(digitalRead(pin_unlock_detect)));
   if (digitalRead(pin_acc_detect) == HIGH)
   {
     if (millis() - timer > poweroff_timer)
