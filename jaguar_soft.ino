@@ -1,4 +1,5 @@
 /*
+  Version 2
   Jaguar XJ X350/X-Type/S-Type head unit button matrix decoder and video selector, with steering wheel ladder resistor detection and HID keyboard output.
 
   When NAV button is pressed, change video input to HDMI, disable Jag touch matrix and enable USB touch
