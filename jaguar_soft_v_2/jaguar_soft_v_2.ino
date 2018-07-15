@@ -44,7 +44,7 @@
 
 // USER SETTINGS:
 //------------------------------------------------------------------------------------------------------
-int serialDebug = 0; // 1 = Debug info via serial connection
+int serialDebug = 1; // 1 = Debug info via serial connection
 int steeringWheelControl = 1; // 1 = Enable detection of steering wheel audio controls
 unsigned long poweroff_timer = 60000; // delay in ms before shutdown is triggered (60000 is 1 min)
 // -----------------------------------------------------------------------------------------------------
@@ -52,9 +52,9 @@ unsigned long poweroff_timer = 60000; // delay in ms before shutdown is triggere
 
 // ADVANCED SETTINGS:
 //------------------------------------------------------------------------------------------------------
-int resistor_ladder_tolerance = 20; // Tolerance applied to steering wheel control input levels
-int steeringcontrol_trackdown = 745; // Average Analogue level for 'Track Down' button
-int steeringcontrol_trackup = 600; // Average Analogue level for 'Track Up' button
+int resistor_ladder_tolerance = 15; // Tolerance applied to steering wheel control input levels
+int steeringcontrol_trackdown = 770; // Average Analogue level for 'Track Down' button
+int steeringcontrol_trackup = 620; // Average Analogue level for 'Track Up' button
 int button_hold_threshold = 4; // Number of loop iterations to trigger a button hold function
 int debounce_delay = 200; // Delay after button press to eliminate multiple triggers
 int row_scan_delay = 10000; // in microseconds, delay after a column change detection before checking row values
@@ -78,7 +78,13 @@ int button_hold_counter = 0;
 boolean button_enable = 1;
 int count_button_press = 0;
 int count_button_unpress = 0;
-//
+
+//PWM backlight
+volatile unsigned long start_pwm = 0;
+volatile unsigned long last_low_impulse = 0;
+volatile unsigned long low_duration = 0;
+unsigned long pwm_low_duration = 0;
+unsigned long check_backlight_timer = 0;
 
 boolean column_1_state = 0;
 boolean last_column_1_state = 0;
@@ -162,7 +168,7 @@ void setup()
 
   
   pinMode(pin_acc_detect, INPUT_PULLUP); // Switched ACC +12v detect line (interrupt)
-  pinMode(pin_backlight_input, INPUT); 
+  pinMode(pin_backlight_input, INPUT_PULLUP); 
   pinMode(pin_matrix_column1, INPUT);
   pinMode(pin_matrix_column3, INPUT);
   pinMode(pin_audio, OUTPUT);
@@ -181,7 +187,43 @@ void setup()
   set_audio_cd();
   rtdpower_on();
   digitalWrite(pin_odroid_power, HIGH);
+
+  attachInterrupt(digitalPinToInterrupt(pin_backlight_input), read_pwm, CHANGE);
 }
+
+//--------------------------------------------------------------------------------------------------------
+void read_pwm()
+{
+  if (digitalRead(pin_backlight_input) == LOW)
+  {
+    start_pwm = micros();
+  }
+  else
+  {
+    low_duration = micros() - start_pwm;
+    last_low_impulse = millis();
+  }
+}
+
+//--------------------------------------------------------------------------------------------------------
+void check_backlight()
+{
+  if (millis() - check_backlight_timer > 1000)
+  {
+    check_backlight_timer = millis();
+    if ((millis() - last_low_impulse) > 500) 
+    {
+      pwm_low_duration = 0;
+    }
+    else
+    {
+      pwm_low_duration = low_duration;
+    }
+    
+    debug("backlight " + String(pwm_low_duration));
+  }
+}
+
 //--------------------------------------------------------------------------------------------------------
 void restore_state()
 {
@@ -227,6 +269,7 @@ void loop()
     check_steering_controls();
   }
   check_cdc_button();
+  check_backlight();
   check_sleep();
 }
 //--------------------------------------------------------------------------------------------------------
@@ -392,8 +435,8 @@ void check_buttons()
     row_a_state = analogRead(pin_matrix_rowa);
     row_b_state = analogRead(pin_matrix_rowb);
     row_c_state = analogRead(pin_matrix_rowc);
-    row_d_state = analogRead(pin_matrix_rowd);
-    if ((row_a_state == LOW) && (row_d_state > 10))
+
+    if (row_a_state == LOW)
     {
       debug("NAV pressed");
       rtdpower_on();
@@ -527,12 +570,12 @@ void check_steering_controls()
 {
   pin_steering_wheel_value = analogRead(pin_steeringcontrol_sensor);
   pin_cdplaying_sensor_state = analogRead(pin_cdplaying_sensor);
-
-  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 1000))
-  {
-    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
-    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
-  }
+  
+//  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 900))
+//  {
+//    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
+//    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
+//  }
 
   if ((pin_steering_wheel_value < steeringcontrol_trackup + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackup - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == HIGH))
   {
