@@ -84,7 +84,9 @@ volatile unsigned long start_pwm = 0;
 volatile unsigned long last_low_impulse = 0;
 volatile unsigned long low_duration = 0;
 unsigned long pwm_low_duration = 0;
+unsigned long prev_pwm_low_duration = 0;
 unsigned long check_backlight_timer = 0;
+unsigned long now_time = 0;
 
 boolean column_1_state = 0;
 boolean last_column_1_state = 0;
@@ -168,7 +170,7 @@ void setup()
 
   
   pinMode(pin_acc_detect, INPUT_PULLUP); // Switched ACC +12v detect line (interrupt)
-  pinMode(pin_backlight_input, INPUT_PULLUP); 
+  pinMode(pin_backlight_input, INPUT); 
   pinMode(pin_matrix_column1, INPUT);
   pinMode(pin_matrix_column3, INPUT);
   pinMode(pin_audio, OUTPUT);
@@ -187,7 +189,6 @@ void setup()
   set_audio_cd();
   rtdpower_on();
   digitalWrite(pin_odroid_power, HIGH);
-
   attachInterrupt(digitalPinToInterrupt(pin_backlight_input), read_pwm, CHANGE);
 }
 
@@ -208,19 +209,28 @@ void read_pwm()
 //--------------------------------------------------------------------------------------------------------
 void check_backlight()
 {
-  if (millis() - check_backlight_timer > 1000)
+  now_time = millis();
+  if (now_time - check_backlight_timer > 200)
   {
-    check_backlight_timer = millis();
-    if ((millis() - last_low_impulse) > 500) 
+    check_backlight_timer = now_time;
+    pwm_low_duration = low_duration;
+    if ((now_time - last_low_impulse) > 500) 
     {
       pwm_low_duration = 0;
     }
-    else
+    if (abs(prev_pwm_low_duration - pwm_low_duration) >= 10) 
     {
-      pwm_low_duration = low_duration;
+      prev_pwm_low_duration = pwm_low_duration;
+      if (pwm_low_duration == 0)
+      {
+        rtdpower_off();
+      }
+      else
+      {
+        rtdpower_on();
+      }
+      debug("backlight " + String(pwm_low_duration));
     }
-    
-    debug("backlight " + String(pwm_low_duration));
   }
 }
 
@@ -467,9 +477,7 @@ void check_buttons()
       debug(String(button_hold_counter));
       if (button_hold_counter > 2)
       {
-        power_control = 1;
-        generalcontrol_flag = 1;
-        last_rtdpower_state = LOW;
+        rtdpower_off();
       }
     }
     if (row_c_state == LOW)
@@ -602,6 +610,17 @@ void rtdpower_on()
   }
 }
 
+void rtdpower_off()
+{
+  if (last_rtdpower_state == HIGH)
+  {
+    power_control = 1;
+    generalcontrol_flag = 1;
+    last_rtdpower_state = LOW;
+    delay(1000);
+  }
+}
+
 void debug(String output_string)
 {
   if (serialDebug == 1)
@@ -627,7 +646,7 @@ void sleep()
   digitalWrite(pin_resistivetouch_power, HIGH);    // off usb_touch
   digitalWrite(pin_front_camera_power, LOW);       // off camera power
   digitalWrite(pin_audio, LOW);
-
+  detachInterrupt(digitalPinToInterrupt(pin_backlight_input));
   noInterrupts ();           // make sure we don't get interrupted before we sleep
   attachInterrupt(digitalPinToInterrupt(pin_acc_detect), processInterrupt, CHANGE);
   EIFR |= 0x01; // clear any queued interrupts
@@ -651,6 +670,7 @@ void sleep()
   delay(100);
   debug("Waking...");
   digitalWrite(pin_odroid_power, HIGH);
+  attachInterrupt(digitalPinToInterrupt(pin_backlight_input), read_pwm, CHANGE);
   timer = millis();
   restore_state();
 }
