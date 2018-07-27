@@ -44,7 +44,7 @@
 
 // USER SETTINGS:
 //------------------------------------------------------------------------------------------------------
-int serialDebug = 1; // 1 = Debug info via serial connection
+int serialDebug = 0; // 1 = Debug info via serial connection
 int steeringWheelControl = 1; // 1 = Enable detection of steering wheel audio controls
 unsigned long poweroff_timer = 60000; // delay in ms before shutdown is triggered (60000 is 1 min)
 // -----------------------------------------------------------------------------------------------------
@@ -87,6 +87,8 @@ unsigned long pwm_low_duration = 0;
 unsigned long prev_pwm_low_duration = 0;
 unsigned long check_backlight_timer = 0;
 unsigned long now_time = 0;
+byte pwm_out = 0;
+const unsigned long MAX_LOW_DURATION = 5152;
 
 boolean column_1_state = 0;
 boolean last_column_1_state = 0;
@@ -118,7 +120,7 @@ int pin_touchmatrix_power = 9; //Jaguar Touch Matrix Power (high-ON, low-OFF)
 int pin_odroid_power = 10; // Odroid Power
 int pin_front_camera_power = 11; // Camera power
 
-int pin_backlight = 12; 
+int pin_backlight_en = 12; 
 int pin_backlight_pwm = 13;
 
 //Analogue Pins ---------------------------------------------------
@@ -152,8 +154,8 @@ boolean generalcontrol_flag;
 byte left_temp;
 byte right_temp;
 byte outside_temp;
-byte input_control;   // 00 - оставить без изменения, 01-AV1, 02- AV2, 03- HDMI, 04- YPbPr, 05 - VGA
-byte power_control;   // 00 -не менять, 01 - выключить, 02-включить
+byte input_control;   // 00 - РѕСЃС‚Р°РІРёС‚СЊ Р±РµР· РёР·РјРµРЅРµРЅРёСЏ, 01-AV1, 02- AV2, 03- HDMI, 04- YPbPr, 05 - VGA
+byte power_control;   // 00 -РЅРµ РјРµРЅСЏС‚СЊ, 01 - РІС‹РєР»СЋС‡РёС‚СЊ, 02-РІРєР»СЋС‡РёС‚СЊ
 byte backlight_control;
 byte bright_control;
 byte contrast_control;
@@ -179,6 +181,8 @@ void setup()
   pinMode(pin_resistivetouch_power, OUTPUT);
   pinMode(pin_odroid_power, OUTPUT);
   pinMode(pin_front_camera_power, OUTPUT);
+
+  pinMode(pin_backlight_pwm, OUTPUT);
   
   if (serialDebug == 1) Serial.begin(115200);
  
@@ -187,6 +191,7 @@ void setup()
   last_output_state = 3; // Force change to Jaguar mode with dummy value
   set_jaguar_mode();
   set_audio_cd();
+  analogWrite(pin_backlight_pwm, 0);
   rtdpower_on();
   digitalWrite(pin_odroid_power, HIGH);
   attachInterrupt(digitalPinToInterrupt(pin_backlight_input), read_pwm, CHANGE);
@@ -223,15 +228,25 @@ void check_backlight()
       prev_pwm_low_duration = pwm_low_duration;
       if (pwm_low_duration == 0)
       {
+        set_brightness(pwm_low_duration);
         rtdpower_off();
       }
       else
       {
+        set_brightness(pwm_low_duration);
         rtdpower_on();
       }
       debug("backlight " + String(pwm_low_duration));
     }
   }
+}
+
+void set_brightness(unsigned long duration)
+{
+  if (duration > MAX_LOW_DURATION) duration = MAX_LOW_DURATION;
+  pwm_out = 255 - byte(duration * 255 / MAX_LOW_DURATION);
+  analogWrite(pin_backlight_pwm, pwm_out);
+  debug("pwm_out " + String(pwm_out));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -695,4 +710,5 @@ void check_sleep()
     timer = millis();
   }
 }
+
 
