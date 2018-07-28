@@ -600,13 +600,13 @@ void check_steering_controls()
 //    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
 //  }
 
-  if ((pin_steering_wheel_value < steeringcontrol_trackup + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackup - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == HIGH))
+  if ((pin_steering_wheel_value < steeringcontrol_trackup + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackup - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == LOW))
   {
     Consumer.write(MEDIA_NEXT);
     debug("KEYCODE_MEDIA_NEXT");
     delay(debounce_delay);
   }
-  if ((pin_steering_wheel_value < steeringcontrol_trackdown + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackdown - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == HIGH))
+  if ((pin_steering_wheel_value < steeringcontrol_trackdown + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackdown - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == LOW))
   {
     Consumer.write(MEDIA_PREVIOUS);
     debug("KEYCODE_MEDIA_PREVIOUS");
