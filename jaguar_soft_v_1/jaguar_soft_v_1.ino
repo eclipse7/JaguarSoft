@@ -460,8 +460,8 @@ void check_buttons()
     row_a_state = analogRead(pin_matrix_rowa);
     row_b_state = analogRead(pin_matrix_rowb);
     row_c_state = analogRead(pin_matrix_rowc);
-
-    if (row_a_state == LOW)
+    row_d_state = analogRead(pin_matrix_rowd);
+    if ((row_a_state == LOW) && (row_d_state > 10))
     {
       debug("NAV pressed");
       rtdpower_on();
@@ -710,5 +710,3 @@ void check_sleep()
     timer = millis();
   }
 }
-
-
