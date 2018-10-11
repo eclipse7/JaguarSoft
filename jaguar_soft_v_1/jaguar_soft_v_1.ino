@@ -44,17 +44,17 @@
 
 // USER SETTINGS:
 //------------------------------------------------------------------------------------------------------
-int serialDebug = 1; // 1 = Debug info via serial connection
-int steeringWheelControl = 0; // 1 = Enable detection of steering wheel audio controls
+int serialDebug = 0; // 1 = Debug info via serial connection
+int steeringWheelControl = 1; // 1 = Enable detection of steering wheel audio controls
 unsigned long poweroff_timer = 60000; // delay in ms before shutdown is triggered (60000 is 1 min)
 // -----------------------------------------------------------------------------------------------------
 
 
 // ADVANCED SETTINGS:
 //------------------------------------------------------------------------------------------------------
-int resistor_ladder_tolerance = 15; // Tolerance applied to steering wheel control input levels
-int steeringcontrol_trackdown = 770; // Average Analogue level for 'Track Down' button
-int steeringcontrol_trackup = 620; // Average Analogue level for 'Track Up' button
+int resistor_ladder_tolerance = 10; // Tolerance applied to steering wheel control input levels
+int steeringcontrol_trackdown = 745; // Average Analogue level for 'Track Down' button
+int steeringcontrol_trackup = 600; // Average Analogue level for 'Track Up' button
 int button_hold_threshold = 4; // Number of loop iterations to trigger a button hold function
 int debounce_delay = 200; // Delay after button press to eliminate multiple triggers
 int row_scan_delay = 10000; // in microseconds, delay after a column change detection before checking row values
@@ -224,18 +224,18 @@ void check_backlight()
     {
       pwm_low_duration = 0;
     }
-    if (abs(prev_pwm_low_duration - pwm_low_duration) >= 50)
+    if (abs(prev_pwm_low_duration - pwm_low_duration) >= 70)
     {
       prev_pwm_low_duration = pwm_low_duration;
       if (pwm_low_duration == 0)
       {
         set_brightness(pwm_low_duration);
-        //        rtdpower_off();  for developing
+        rtdpower_off();
       }
       else
       {
         set_brightness(pwm_low_duration);
-        //        rtdpower_on();  for developing
+        rtdpower_on();
       }
       debug("backlight " + String(pwm_low_duration));
     }
@@ -596,11 +596,11 @@ void check_steering_controls()
   pin_steering_wheel_value = analogRead(pin_steeringcontrol_sensor);
   pin_cdplaying_sensor_state = analogRead(pin_cdplaying_sensor);
 
-  //  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 900))
-  //  {
-  //    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
-  //    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
-  //  }
+  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 900))
+  {
+    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
+    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
+  }
 
   if ((pin_steering_wheel_value < steeringcontrol_trackup + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackup - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == HIGH))
   {
