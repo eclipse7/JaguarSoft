@@ -21,7 +21,7 @@
   NOTE: Assign F7 in Odroid Utility to launch Terminal Emulator - essential to allow soft-shutdown via USB
   NOTE: Assign F10 in Odroid Utility to launch your preferred Navigation app
 
-  Version 2.7 - Pressing TEL activate AV2 input 
+  Version 2.7 - Pressing TEL activate AV2 input
   Version 2.6 - Pressing CDC button switches relay 3 and 4 on to changeover from CD audio to Aux input
   Version 2.5 - Now correctly switches to HDMI mode when NAV pressed when screen is off.
   Version 2.4 - Holding MENU for 5 seconds switches off the LCD panel. Pressing AUDIO, CLIMATE, NAV or MENU switches the LCD panel back on. LCD panel switched on at power on and after waking from sleep mode
@@ -38,7 +38,7 @@
 
   Ben Willcox 2016-2017
   ben.willcox@willcoxonline.com
-  Vladyslav Khomenko  
+  Vladyslav Khomenko
   https://github.com/eclipse7
 */
 
@@ -120,7 +120,7 @@ int pin_touchmatrix_power = 9; //Jaguar Touch Matrix Power (high-ON, low-OFF)
 int pin_odroid_power = 10; // Odroid Power
 int pin_front_camera_power = 11; // Camera power
 
-int pin_backlight_en = 12; 
+int pin_backlight_en = 12;
 int pin_backlight_pwm = 13;
 
 //Analogue Pins ---------------------------------------------------
@@ -170,9 +170,9 @@ void setup()
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent); // register wire.write interrupt event
 
-  
+
   pinMode(pin_acc_detect, INPUT_PULLUP); // Switched ACC +12v detect line (interrupt)
-  pinMode(pin_backlight_input, INPUT); 
+  pinMode(pin_backlight_input, INPUT);
   pinMode(pin_matrix_column1, INPUT);
   pinMode(pin_matrix_column3, INPUT);
   pinMode(pin_audio, OUTPUT);
@@ -183,9 +183,9 @@ void setup()
   pinMode(pin_front_camera_power, OUTPUT);
 
   pinMode(pin_backlight_pwm, OUTPUT);
-  
+
   if (serialDebug == 1) Serial.begin(115200);
- 
+
   digitalWrite(pin_front_camera_power, LOW); // off camera power
   digitalWrite(pin_resistivetouch_power, HIGH);  // off usb_touch
   last_output_state = 3; // Force change to Jaguar mode with dummy value
@@ -219,11 +219,11 @@ void check_backlight()
   {
     check_backlight_timer = now_time;
     pwm_low_duration = low_duration;
-    if ((now_time - last_low_impulse) > 500) 
+    if ((now_time - last_low_impulse) > 500)
     {
       pwm_low_duration = 0;
     }
-    if (abs(prev_pwm_low_duration - pwm_low_duration) >= 10) 
+    if (abs(prev_pwm_low_duration - pwm_low_duration) >= 10)
     {
       prev_pwm_low_duration = pwm_low_duration;
       if (pwm_low_duration == 0)
@@ -258,19 +258,18 @@ void restore_state()
     set_camera2_mode();
     debug("Last saved state was Camera2");
   }
+  else if (last_output_state == 1)
+  {
+    last_output_state = 3; // Force change to Android mode with dummy value
+    set_android_mode();
+    debug("Last saved state was Android");
+  }
   else
-    if (last_output_state == 1)
-    {
-	  last_output_state = 3; // Force change to Android mode with dummy value
-	  set_android_mode();
-      debug("Last saved state was Android");
-    }
-    else
-    {
-      last_output_state = 3; // Force change to Jaguar mode with dummy value
-      set_jaguar_mode();
-      debug("Last saved state was Jaguar");
-    }
+  {
+    last_output_state = 3; // Force change to Jaguar mode with dummy value
+    set_jaguar_mode();
+    debug("Last saved state was Jaguar");
+  }
 
   if (last_audio_state == LOW)
   {
@@ -565,7 +564,7 @@ void set_camera2_mode()
 {
   if (last_output_state != 2)
   {
-    digitalWrite(pin_touchmatrix_power, LOW);	  // off touchmatrix	
+    digitalWrite(pin_touchmatrix_power, LOW);	  // off touchmatrix
     digitalWrite(pin_resistivetouch_power, HIGH); // off usb_touch
     digitalWrite(pin_front_camera_power, HIGH); // on camera power
     debug("Setting Camera2 mode");
@@ -593,12 +592,12 @@ void check_steering_controls()
 {
   pin_steering_wheel_value = analogRead(pin_steeringcontrol_sensor);
   pin_cdplaying_sensor_state = analogRead(pin_cdplaying_sensor);
-  
-//  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 900))
-//  {
-//    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
-//    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
-//  }
+
+  //  if ((pin_steering_wheel_value > 100) && (pin_steering_wheel_value < 900))
+  //  {
+  //    debug("Steering Wheel Button Voltage:" + String(pin_steering_wheel_value)); // send debug value if anything is detected
+  //    debug("CD Playing Flag Voltage:" + String(pin_cdplaying_sensor_state));
+  //  }
 
   if ((pin_steering_wheel_value < steeringcontrol_trackup + resistor_ladder_tolerance) && (pin_steering_wheel_value > steeringcontrol_trackup - resistor_ladder_tolerance) && (pin_cdplaying_sensor_state < 512) && (last_audio_state == LOW))
   {
@@ -685,6 +684,14 @@ void sleep()
   delay(100);
   debug("Waking...");
   digitalWrite(pin_odroid_power, HIGH);
+
+  start_pwm = 0;
+  last_low_impulse = 0;
+  low_duration = 0;
+  pwm_low_duration = 0;
+  prev_pwm_low_duration = 0;
+  check_backlight_timer = 0;
+
   attachInterrupt(digitalPinToInterrupt(pin_backlight_input), read_pwm, CHANGE);
   timer = millis();
   restore_state();
@@ -710,5 +717,3 @@ void check_sleep()
     timer = millis();
   }
 }
-
-
